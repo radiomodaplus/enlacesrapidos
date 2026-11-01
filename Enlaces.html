@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Bot de Autogestión - Soporte Técnico</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background-color: #e5ddd5;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .chat-container {
+            width: 100%;
+            height: 100%;
+            max-width: 600px;
+            background: #efeae2;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        @media (min-width: 601px) {
+            .chat-container {
+                height: 90vh;
+                border-radius: 12px;
+            }
+        }
+        /* Cabecera estilo WhatsApp */
+        .chat-header {
+            background-color: #007565;
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .avatar {
+            width: 45px;
+            height: 45px;
+            background-color: #128c7e;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .header-info h3 {
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+        .header-info p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        /* Cuerpo del Chat */
+        .chat-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background-image: radial-gradient(#d1dbd6 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.4;
+            position: relative;
+            word-break: break-word;
+        }
+        .message.bot {
+            background-color: white;
+            align-self: flex-start;
+            border-top-left-radius: 0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .message.user {
+            background-color: #d9fdd3;
+            align-self: flex-end;
+            border-top-right-radius: 0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        /* Botones de acción rápida dentro del chat */
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-action {
+            background-color: #005c4b;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+        .btn-action:hover {
+            background-color: #128c7e;
+        }
+        /* Pie de página / Entrada */
+        .chat-footer {
+            background-color: #f0f2f5;
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .chat-footer input {
+            flex: 1;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 24px;
+            outline: none;
+            font-size: 15px;
+            background: white;
+        }
+        .chat-footer button {
+            background-color: #007565;
+            color: white;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        .chat-footer button:hover {
+            background-color: #005c4b;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <!-- Cabecera -->
+        <div class="chat-header">
+            <div class="avatar">AV</div>
+            <div class="header-info">
+                <h3>Soporte Técnico - PlusEMPRESAS</h3>
+                <p>Asistente virtual activo (Desarrollador: Andrés Villada)</p>
+            </div>
+        </div>
+
+        <!-- Cuerpo de Mensajes -->
+        <div class="chat-body" id="chatBody">
+            <!-- Mensaje Inicial del Bot -->
+            <div class="message bot">
+                ¡Hola! Bienvenido al sistema de autogestión de soporte técnico. Para comenzar, por favor ingresa tu <strong>Nombre completo</strong>:
+            </div>
+        </div>
+
+        <!-- Barra de Entrada -->
+        <div class="chat-footer">
+            <input type="text" id="userInput" placeholder="Escribe tu respuesta..." autofocus autocomplete="off">
+            <button id="sendBtn" onclick="procesarEntrada()">➤</button>
+        </div>
+    </div>
+
+    <script>
+        let paso = 1; // Controla el flujo de registro inicial
+        let datosUsuario = { nombre: "", correo: "", empleado: "", documento: "" };
+
+        const chatBody = document.getElementById('chatBody');
+        const userInput = document.getElementById('userInput');
+
+        // Permitir enviar con la tecla Enter
+        userInput.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                procesarEntrada();
+            }
+        });
+
+        function agregarMensaje(texto, tipo) {
+            const div = document.createElement('div');
+            div.className = `message ${tipo}`;
+            div.innerHTML = texto;
+            chatBody.appendChild(div);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function procesarEntrada() {
+            const texto = userInput.value.trim();
+            if (texto === "" && paso <= 3) return;
+
+            if (paso <= 3) {
+                // Mostrar lo que escribió el usuario
+                agregarMensaje(texto, 'user');
+                userInput.value = "";
+            }
+
+            if (paso === 1) {
+                datosUsuario.nombre = texto;
+                paso = 2;
+                setTimeout(() => {
+                    agregarMensaje(`Mucho gusto, <strong>${datosUsuario.nombre}</strong>. Ahora, por favor ingresa tu <strong>Correo electrónico</strong>:`, 'bot');
+                }, 500);
+            } 
+            else if (paso === 2) {
+                datosUsuario.correo = texto;
+                paso = 3;
+                setTimeout(() => {
+                    agregarMensaje(`Perfecto. Por último, ingresa tu <strong>Código de empleado</strong>:`, 'bot');
+                }, 500);
+            } 
+            else if (paso === 3) {
+                datosUsuario.empleado = texto;
+                paso = 4; // Cambia a modo menú interactivo
+                setTimeout(() => {
+                    agregarMensaje(`¡Registro completado con éxito!<br><br>
+                    🤖 <strong>¡Bienvenido al sistema!</strong><br>
+                    👤 <strong>Técnico:</strong> Andrés Villada (Desarrollador web)<br>
+                    🆔 <strong>CC:</strong> 1060594261<br>
+                    📞 <strong>Tel:</strong> 3332464802<br>
+                    📧 <strong>Correo:</strong> andres@radiomoda.com.co<br><br>
+                    Por favor, ingresa tu <strong>número de documento</strong> para validar tu sesión en el sistema:`, 'bot');
+                }, 600);
+            }
+            else if (paso === 4) {
+                // Validación del documento solicitado
+                datosUsuario.documento = texto;
+                paso = 5; // Modo libre con comandos rápidos
+                setTimeout(() => {
+                    agregarMensaje(`Validación exitosa para el documento: <strong>${datosUsuario.documento}</strong>.<br><br>¿En qué te puedo ayudar hoy? Puedes escribir o hacer clic en las opciones rápidas de abajo:`, 'bot');
+                    mostrarMenuOpciones();
+                }, 600);
+            }
+            else {
+                // Modo interactivo por palabras clave o texto libre
+                agregarMensaje(texto, 'user');
+                userInput.value = "";
+                responderComando(texto);
+            }
+        }
+
+        function mostrarMenuOpciones() {
+            const div = document.createElement('div');
+            div.className = 'message bot';
+            div.innerHTML = `Opciones disponibles:
+                <div class="action-buttons">
+                    <button class="btn-action" onclick="ejecutarAccion('zeno')">Zeno Radio</button>
+                    <button class="btn-action" onclick="ejecutarAccion('enlaces')">Enlaces rápidos</button>
+                </div>`;
+            chatBody.appendChild(div);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function ejecutarAccion(tipo) {
+            if (tipo === 'zeno') {
+                agregarMensaje("Zeno Radio", 'user');
+                setTimeout(() => {
+                    agregarMensaje(`Aquí tienes el acceso directo al sistema de transmisión de Zeno Radio:`, 'bot');
+                    const div = document.createElement('div');
+                    div.className = 'message bot';
+                    div.innerHTML = `<a href="https://tools.zeno.fm/auth/realms/broadcasters/login-actions/authenticate?client_id=zeno-tools&tab_id=UQbduHjIsos&client_data=eyJydSI6Imh0dHBzOi8vdG9vbHMuZ2Vuby5mbS8iLCJydCI6ImNvZGUiLCJybSI6ImZyYWdtZW50In0" target="_blank" class="btn-action">Ir al sitio Zeno Radio ↗</a>`;
+                    chatBody.appendChild(div);
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                }, 400);
+            } else if (tipo === 'enlaces') {
+                agregarMensaje("Enlaces rápidos", 'user');
+                setTimeout(() => {
+                    agregarMensaje(`Aquí tienes el enlace rápido principal del sistema:`, 'bot');
+                    const div = document.createElement('div');
+                    div.className = 'message bot';
+                    div.innerHTML = `<a href="https://github.com" target="_blank" class="btn-action">Ir al sitio GitHub ↗</a>`;
+                    chatBody.appendChild(div);
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                }, 400);
+            }
+        }
+
+        function responderComando(texto) {
+            const txt = texto.toLowerCase();
+            setTimeout(() => {
+                if (txt.includes('zeno') || txt.includes('radio')) {
+                    agregarMensaje(`Encontré la herramienta de <strong>Zeno Radio</strong>:<br><br><a href="https://tools.zeno.fm/auth/realms/broadcasters/login-actions/authenticate?client_id=zeno-tools&tab_id=UQbduHjIsos&client_data=eyJydSI6Imh0dHBzOi8vdG9vbHMuZ2Vuby5mbS8iLCJydCI6ImNvZGUiLCJybSI6ImZyYWdtZW50In0" target="_blank" class="btn-action">Ir al sitio Zeno Radio ↗</a>`, 'bot');
+                } else if (txt.includes('enlace') || txt.includes('github') || txt.includes('rapido')) {
+                    agregarMensaje(`Aquí tienes los <strong>enlaces rápidos</strong> solicitados:<br><br><a href="https://github.com" target="_blank" class="btn-action">Ir al sitio GitHub ↗</a>`, 'bot');
+                } else {
+                    agregarMensaje(`No he reconocido exactamente esa frase. Puedes escribir <strong>"Zeno Radio"</strong> o <strong>"Enlaces rápidos"</strong>, o usar los botones del menú.`, 'bot');
+                    mostrarMenuOpciones();
+                }
+            }, 500);
+        }
+    </script>
+
+</body>
+</html>
