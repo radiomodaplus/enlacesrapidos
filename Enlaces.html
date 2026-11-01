@@ -93,7 +93,32 @@
             border-top-right-radius: 0;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
-        /* Botones de acción rápida dentro del chat */
+        /* Estilo para el indicador de "Escribiendo..." */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+            background: white;
+            align-self: flex-start;
+            border-radius: 8px;
+            border-top-left-radius: 0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            align-items: center;
+        }
+        .typing-dot {
+            width: 7px;
+            height: 7px;
+            background-color: #90949c;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+        /* Botones de acción rápida */
         .action-buttons {
             display: flex;
             flex-wrap: wrap;
@@ -165,9 +190,8 @@
 
         <!-- Cuerpo de Mensajes -->
         <div class="chat-body" id="chatBody">
-            <!-- Mensaje Inicial del Bot -->
             <div class="message bot">
-                ¡Hola! Bienvenido al sistema de autogestión de soporte técnico. Para comenzar, por favor ingresa tu <strong>Nombre completo</strong>:
+                ¡Hola! Bienvenido al sistema de autogestión. Para iniciar conversación, por favor ingresa tu <strong>Nombre completo</strong>:
             </div>
         </div>
 
@@ -179,13 +203,13 @@
     </div>
 
     <script>
-        let paso = 1; // Controla el flujo de registro inicial
+        let paso = 1; 
         let datosUsuario = { nombre: "", correo: "", empleado: "", documento: "" };
+        const CEDULA_AUTORIZADA = "1060594261"; // Cédula registrada en el sistema
 
         const chatBody = document.getElementById('chatBody');
         const userInput = document.getElementById('userInput');
 
-        // Permitir enviar con la tecla Enter
         userInput.addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
                 procesarEntrada();
@@ -200,12 +224,29 @@
             chatBody.scrollTop = chatBody.scrollHeight;
         }
 
+        // Simula el estado "Escribiendo..." con duración de hasta 3 segundos
+        function mostrarEscribiendo(callback) {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>`;
+            chatBody.appendChild(typingDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+
+            const tiempoDemora = Math.floor(Math.random() * 1500) + 1500; // Entre 1.5s y 3s
+
+            setTimeout(() => {
+                const indicador = document.getElementById('typingIndicator');
+                if (indicador) indicador.remove();
+                callback();
+            }, tiempoDemora);
+        }
+
         function procesarEntrada() {
             const texto = userInput.value.trim();
-            if (texto === "" && paso <= 3) return;
+            if (texto === "" && paso <= 4) return;
 
-            if (paso <= 3) {
-                // Mostrar lo que escribió el usuario
+            if (paso <= 4) {
                 agregarMensaje(texto, 'user');
                 userInput.value = "";
             }
@@ -213,44 +254,48 @@
             if (paso === 1) {
                 datosUsuario.nombre = texto;
                 paso = 2;
-                setTimeout(() => {
-                    agregarMensaje(`Mucho gusto, <strong>${datosUsuario.nombre}</strong>. Ahora, por favor ingresa tu <strong>Correo electrónico</strong>:`, 'bot');
-                }, 500);
+                mostrarEscribiendo(() => {
+                    agregarMensaje(`Mucho gusto, <strong>${datosUsuario.nombre}</strong>. Ahora ingresa tu <strong>Correo electrónico</strong>:`, 'bot');
+                });
             } 
             else if (paso === 2) {
                 datosUsuario.correo = texto;
                 paso = 3;
-                setTimeout(() => {
+                mostrarEscribiendo(() => {
                     agregarMensaje(`Perfecto. Por último, ingresa tu <strong>Código de empleado</strong>:`, 'bot');
-                }, 500);
+                });
             } 
             else if (paso === 3) {
                 datosUsuario.empleado = texto;
-                paso = 4; // Cambia a modo menú interactivo
-                setTimeout(() => {
-                    agregarMensaje(`¡Registro completado con éxito!<br><br>
-                    🤖 <strong>¡Bienvenido al sistema!</strong><br>
-                    👤 <strong>Técnico:</strong> Andrés Villada (Desarrollador web)<br>
-                    🆔 <strong>CC:</strong> 1060594261<br>
-                    📞 <strong>Tel:</strong> 3332464802<br>
-                    📧 <strong>Correo:</strong> andres@radiomoda.com.co<br><br>
-                    Por favor, ingresa tu <strong>número de documento</strong> para validar tu sesión en el sistema:`, 'bot');
-                }, 600);
+                paso = 4; 
+                mostrarEscribiendo(() => {
+                    agregarMensaje(`Datos iniciales registrados. Para validar tu acceso en el sistema, por favor ingresa tu <strong>número de documento (Cédula)</strong>:`, 'bot');
+                });
             }
             else if (paso === 4) {
-                // Validación del documento solicitado
-                datosUsuario.documento = texto;
-                paso = 5; // Modo libre con comandos rápidos
-                setTimeout(() => {
-                    agregarMensaje(`Validación exitosa para el documento: <strong>${datosUsuario.documento}</strong>.<br><br>¿En qué te puedo ayudar hoy? Puedes escribir o hacer clic en las opciones rápidas de abajo:`, 'bot');
-                    mostrarMenuOpciones();
-                }, 600);
+                datosUsuario.documento = texto.trim();
+                mostrarEscribiendo(() => {
+                    if (datosUsuario.documento === CEDULA_AUTORIZADA) {
+                        paso = 5; // Acceso concedido
+                        agregarMensaje(`✅ Cédula verificada con éxito en el sistema.<br><br>
+                        🤖 ¡Bienvenido de nuevo, <strong>${datosUsuario.nombre}</strong>!<br>
+                        👤 <strong>Técnico / Desarrollador:</strong> Andrés Villada<br>
+                        🆔 <strong>CC:</strong> 1060594261<br>
+                        📞 <strong>Tel:</strong> 3332464802<br>
+                        📧 <strong>Correo:</strong> andres@radiomoda.com.co<br><br>
+                        ¿En qué te puedo ayudar hoy? Escribe palabras clave o usa las opciones rápidas:`, 'bot');
+                        mostrarMenuOpciones();
+                    } else {
+                        agregarMensaje(`❌ Lo sentimos, el número de documento <strong>${datosUsuario.documento}</strong> no coincide con ninguna cédula activa en el sistema. Por favor, intenta ingresar el número de documento correcto nuevamente:`, 'bot');
+                    }
+                });
             }
             else {
-                // Modo interactivo por palabras clave o texto libre
                 agregarMensaje(texto, 'user');
                 userInput.value = "";
-                responderComando(texto);
+                mostrarEscribiendo(() => {
+                    responderComando(texto);
+                });
             }
         }
 
@@ -269,39 +314,37 @@
         function ejecutarAccion(tipo) {
             if (tipo === 'zeno') {
                 agregarMensaje("Zeno Radio", 'user');
-                setTimeout(() => {
+                mostrarEscribiendo(() => {
                     agregarMensaje(`Aquí tienes el acceso directo al sistema de transmisión de Zeno Radio:`, 'bot');
                     const div = document.createElement('div');
                     div.className = 'message bot';
                     div.innerHTML = `<a href="https://tools.zeno.fm/auth/realms/broadcasters/login-actions/authenticate?client_id=zeno-tools&tab_id=UQbduHjIsos&client_data=eyJydSI6Imh0dHBzOi8vdG9vbHMuZ2Vuby5mbS8iLCJydCI6ImNvZGUiLCJybSI6ImZyYWdtZW50In0" target="_blank" class="btn-action">Ir al sitio Zeno Radio ↗</a>`;
                     chatBody.appendChild(div);
                     chatBody.scrollTop = chatBody.scrollHeight;
-                }, 400);
+                });
             } else if (tipo === 'enlaces') {
                 agregarMensaje("Enlaces rápidos", 'user');
-                setTimeout(() => {
-                    agregarMensaje(`Aquí tienes el enlace rápido principal del sistema:`, 'bot');
+                mostrarEscribiendo(() => {
+                    agregarMensaje(`Aquí tienes el enlace rápido principal:`, 'bot');
                     const div = document.createElement('div');
                     div.className = 'message bot';
                     div.innerHTML = `<a href="https://github.com" target="_blank" class="btn-action">Ir al sitio GitHub ↗</a>`;
                     chatBody.appendChild(div);
                     chatBody.scrollTop = chatBody.scrollHeight;
-                }, 400);
+                });
             }
         }
 
         function responderComando(texto) {
             const txt = texto.toLowerCase();
-            setTimeout(() => {
-                if (txt.includes('zeno') || txt.includes('radio')) {
-                    agregarMensaje(`Encontré la herramienta de <strong>Zeno Radio</strong>:<br><br><a href="https://tools.zeno.fm/auth/realms/broadcasters/login-actions/authenticate?client_id=zeno-tools&tab_id=UQbduHjIsos&client_data=eyJydSI6Imh0dHBzOi8vdG9vbHMuZ2Vuby5mbS8iLCJydCI6ImNvZGUiLCJybSI6ImZyYWdtZW50In0" target="_blank" class="btn-action">Ir al sitio Zeno Radio ↗</a>`, 'bot');
-                } else if (txt.includes('enlace') || txt.includes('github') || txt.includes('rapido')) {
-                    agregarMensaje(`Aquí tienes los <strong>enlaces rápidos</strong> solicitados:<br><br><a href="https://github.com" target="_blank" class="btn-action">Ir al sitio GitHub ↗</a>`, 'bot');
-                } else {
-                    agregarMensaje(`No he reconocido exactamente esa frase. Puedes escribir <strong>"Zeno Radio"</strong> o <strong>"Enlaces rápidos"</strong>, o usar los botones del menú.`, 'bot');
-                    mostrarMenuOpciones();
-                }
-            }, 500);
+            if (txt.includes('zeno') || txt.includes('radio')) {
+                agregarMensaje(`Encontré la herramienta de <strong>Zeno Radio</strong>:<br><br><a href="https://tools.zeno.fm/auth/zeno.fm..." target="_blank" class="btn-action">Ir al sitio Zeno Radio ↗</a>`, 'bot');
+            } else if (txt.includes('enlace') || txt.includes('github') || txt.includes('rapido')) {
+                agregarMensaje(`Aquí tienes los <strong>enlaces rápidos</strong> solicitados:<br><br><a href="https://github.com" target="_blank" class="btn-action">Ir al sitio GitHub ↗</a>`, 'bot');
+            } else {
+                agregarMensaje(`No he reconocido exactamente esa frase. Puedes escribir <strong>"Zeno Radio"</strong> o <strong>"Enlaces rápidos"</strong>, o usar los botones del menú.`, 'bot');
+                mostrarMenuOpciones();
+            }
         }
     </script>
 
